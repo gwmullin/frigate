@@ -7,6 +7,7 @@ import { StatusBarMessagesProvider } from "@/context/statusbar-provider";
 import { LanguageProvider } from "./language-provider";
 import { StreamingSettingsProvider } from "./streaming-settings-provider";
 import { AuthProvider } from "./auth-context";
+import { ConfigProvider } from "./config-context";
 
 type TProvidersProps = {
   children: ReactNode;
@@ -16,19 +17,21 @@ function providers({ children }: TProvidersProps) {
   return (
     <AuthProvider>
       <ApiProvider>
-        <ThemeProvider defaultTheme="system" storageKey="frigate-ui-theme">
-          <LanguageProvider>
-            <TooltipProvider>
-              <IconContext.Provider value={{ size: "20" }}>
-                <StatusBarMessagesProvider>
-                  <StreamingSettingsProvider>
-                    {children}
-                  </StreamingSettingsProvider>
-                </StatusBarMessagesProvider>
-              </IconContext.Provider>
-            </TooltipProvider>
-          </LanguageProvider>
-        </ThemeProvider>
+        <ConfigProvider>
+          <ThemeProvider defaultTheme="system" storageKey="frigate-ui-theme">
+            <LanguageProvider>
+              <TooltipProvider>
+                <IconContext.Provider value={{ size: "20" }}>
+                  <StatusBarMessagesProvider>
+                    <StreamingSettingsProvider>
+                      {children}
+                    </StreamingSettingsProvider>
+                  </StatusBarMessagesProvider>
+                </IconContext.Provider>
+              </TooltipProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </ConfigProvider>
       </ApiProvider>
     </AuthProvider>
   );

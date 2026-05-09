@@ -11,10 +11,9 @@ import { Redirect } from "./components/navigation/Redirect";
 import { cn } from "./lib/utils";
 import { isPWA } from "./utils/isPWA";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import useSWR from "swr";
-import { FrigateConfig } from "./types/frigateConfig";
 import ActivityIndicator from "@/components/indicators/activity-indicator";
 import { isRedirectingToLogin } from "@/api/auth-redirect";
+import { useConfig } from "@/context/config-context";
 
 const Live = lazy(() => import("@/pages/Live"));
 const Events = lazy(() => import("@/pages/Events"));
@@ -32,29 +31,28 @@ const AccessDenied = lazy(() => import("@/pages/AccessDenied"));
 const Replay = lazy(() => import("@/pages/Replay"));
 
 function App() {
-  const { data: config } = useSWR<FrigateConfig>("config", {
-    revalidateOnFocus: false,
-  });
-
   return (
     <Providers>
       <BrowserRouter basename={window.baseUrl}>
         <Wrapper>
-          {config?.safe_mode ? <SafeAppView /> : <DefaultAppView />}
+          <AppContent />
         </Wrapper>
       </BrowserRouter>
     </Providers>
   );
 }
 
-function DefaultAppView() {
-  const { data: config } = useSWR<FrigateConfig>("config", {
-    revalidateOnFocus: false,
-  });
+function AppContent() {
+  const config = useConfig();
 
-  // Compute required roles for main routes, ensuring we have config first
-  // to prevent race condition where custom roles are temporarily unavailable
-  const mainRouteRoles = config?.auth?.roles
+  return config.safe_mode ? <SafeAppView /> : <DefaultAppView />;
+}
+
+function DefaultAppView() {
+  const config = useConfig();
+
+  // Compute required roles for main routes
+  const mainRouteRoles = config.auth?.roles
     ? Object.keys(config.auth.roles)
     : undefined;
 

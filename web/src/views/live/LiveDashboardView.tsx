@@ -1,25 +1,19 @@
-import { useFrigateReviews } from "@/api/ws";
 import Logo from "@/components/Logo";
 import { CameraGroupSelector } from "@/components/filter/CameraGroupSelector";
 import { LiveGridIcon, LiveListIcon } from "@/components/icons/LiveIcons";
-import { AnimatedEventCard } from "@/components/card/AnimatedEventCard";
 import BirdseyeLivePlayer from "@/components/player/BirdseyeLivePlayer";
 import LivePlayer from "@/components/player/LivePlayer";
 import { Button } from "@/components/ui/button";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useUserPersistence } from "@/hooks/use-user-persistence";
 import {
   AllGroupsStreamingSettings,
   CameraConfig,
-  FrigateConfig,
 } from "@/types/frigateConfig";
-import { ReviewSegment } from "@/types/review";
 import {
   useCallback,
   useContext,
@@ -27,6 +21,7 @@ import {
   useMemo,
   useRef,
   useState,
+  Suspense,
 } from "react";
 import {
   isDesktop,
@@ -34,8 +29,8 @@ import {
   isMobileOnly,
   isTablet,
 } from "react-device-detect";
-import useSWR from "swr";
 import DraggableGridLayout from "./DraggableGridLayout";
+import { RecentAlerts } from "./RecentAlerts";
 import { IoClose } from "react-icons/io5";
 import { LuLayoutDashboard } from "react-icons/lu";
 import { cn } from "@/lib/utils";
@@ -55,6 +50,7 @@ import { EmptyCard } from "@/components/card/EmptyCard";
 import { BsFillCameraVideoOffFill } from "react-icons/bs";
 import { AuthContext } from "@/context/auth-context";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useConfig } from "@/context/config-context";
 
 type LiveDashboardViewProps = {
   cameras: CameraConfig[];
@@ -74,7 +70,7 @@ export default function LiveDashboardView({
 }: LiveDashboardViewProps) {
   const { t } = useTranslation(["views/live"]);
 
-  const { data: config } = useSWR<FrigateConfig>("config");
+  const config = useConfig();
 
   // layout
 
@@ -87,15 +83,7 @@ export default function LiveDashboardView({
   const containerRef = useRef<HTMLDivElement>(null);
   const birdseyeContainerRef = useRef<HTMLDivElement>(null);
 
-  // recent events
-
-  const eventUpdate = useFrigateReviews();
-
   const alertCameras = useMemo(() => {
-    if (!config) {
-      return null;
-    }
-
     if (cameraGroup == "default") {
       return Object.values(config.cameras)
         .filter((cam) => cam.ui.dashboard)
@@ -115,54 +103,6 @@ export default function LiveDashboardView({
       .filter((cam) => config.camera_groups[cameraGroup]?.cameras.includes(cam))
       .join(",");
   }, [cameras, cameraGroup, config, includeBirdseye]);
-
-  const { data: allEvents, mutate: updateEvents } = useSWR<ReviewSegment[]>([
-    "review",
-    {
-      limit: 10,
-      severity: "alert",
-      reviewed: 0,
-      cameras: alertCameras,
-    },
-  ]);
-
-  useEffect(() => {
-    if (!eventUpdate) {
-      return;
-    }
-
-    // if event is ended and was saved, update events list
-    if (eventUpdate.after.severity == "alert") {
-      if (
-        eventUpdate.type == "end" ||
-        eventUpdate.type == "new" ||
-        eventUpdate.type == "genai"
-      ) {
-        setTimeout(
-          () => updateEvents(),
-          eventUpdate.type == "end" ? 1000 : 6000,
-        );
-      } else if (
-        eventUpdate.before.data.objects.length <
-        eventUpdate.after.data.objects.length
-      ) {
-        setTimeout(() => updateEvents(), 5000);
-      }
-
-      return;
-    }
-  }, [eventUpdate, updateEvents]);
-
-  const events = useMemo(() => {
-    if (!allEvents) {
-      return [];
-    }
-
-    const date = new Date();
-    date.setHours(date.getHours() - 1);
-    const cutoff = date.getTime() / 1000;
-    return allEvents.filter((event) => event.start_time > cutoff);
-  }, [allEvents]);
 
   // camera live views
 
@@ -457,24 +397,13 @@ export default function LiveDashboardView({
         <NoCameraView cameraGroup={cameraGroup} />
       ) : (
         <>
-          {!fullscreen && events && events.length > 0 && (
-            <ScrollArea>
-              <TooltipProvider>
-                <div className="flex items-center gap-2 px-1">
-                  {events.map((event) => {
-                    return (
-                      <AnimatedEventCard
-                        key={event.id}
-                        event={event}
-                        selectedGroup={cameraGroup}
-                        updateEvents={updateEvents}
-                      />
-                    );
-                  })}
-                </div>
-              </TooltipProvider>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+          {!fullscreen && (
+            <Suspense fallback={null}>
+              <RecentAlerts
+                alertCameras={alertCameras}
+                cameraGroup={cameraGroup}
+              />
+            </Suspense>
           )}
 
           {!cameraGroup || cameraGroup == "default" || isMobileOnly ? (
