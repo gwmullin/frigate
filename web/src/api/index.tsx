@@ -6,6 +6,7 @@ import { ReactNode } from "react";
 import { isRedirectingToLogin, setRedirectingToLogin } from "./auth-redirect";
 
 axios.defaults.baseURL = `${baseUrl}api/`;
+axios.defaults.withCredentials = true;
 
 type ApiProviderType = {
   children?: ReactNode;
