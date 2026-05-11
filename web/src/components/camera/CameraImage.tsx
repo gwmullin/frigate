@@ -97,6 +97,7 @@ export default function CameraImage({
           )}
           onLoad={handleImageLoad}
           loading="lazy"
+          fetchPriority="high"
         />
       ) : (
         <div className="size-full rounded-lg border-2 border-muted bg-background_alt text-center md:rounded-2xl" />
